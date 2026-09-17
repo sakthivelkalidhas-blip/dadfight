@@ -1,11 +1,11 @@
-import { Server, Room } from "colyseus";
-import { WebSocketTransport } from "@colyseus/ws-transport";
-import { Schema, MapSchema, type } from "@colyseus/schema";
-import express from "express";
-import { createServer } from "http";
-import path from "path";
-import { fileURLToPath } from "url";
-
+   import pkg from "colyseus";
+   const { Server, Room } = pkg;
+   import { WebSocketTransport } from "@colyseus/ws-transport";
+   import { Schema, MapSchema, type } from "@colyseus/schema";
+   import express from "express";
+   import { createServer } from "http";
+   import path from "path";
+   import { fileURLToPath } from "url";
 // ==========================================
 // 1. SCHEMAS
 // ==========================================

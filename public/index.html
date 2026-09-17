@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+  <title>Arena Duel - DEEPAN GAMING INDUSTRY</title>
+  <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    body { overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050505; color: #fff; }
+
+    #canvas-container { width: 100vw; height: 100vh; }
+    #canvas-container canvas { display: block; }
+
+    /* ===================== INTRO / LOBBY ===================== */
+    #intro-screen {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 40%, #241205 0%, #0a0503 55%, #000000 100%);
+      background-size: 200% 200%;
+      animation: bgDrift 12s ease-in-out infinite;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 100; text-align: center; overflow: hidden;
+    }
+
+    @keyframes bgDrift {
+      0%, 100% { background-position: 40% 30%; }
+      50% { background-position: 60% 70%; }
+    }
+
+    .ember {
+      position: absolute; bottom: -10px; border-radius: 50%;
+      background: radial-gradient(circle, #ffb347 0%, #ff4500 60%, transparent 100%);
+      opacity: 0.85; pointer-events: none;
+      animation: emberRise linear infinite;
+    }
+    @keyframes emberRise {
+      0% { transform: translateY(0) translateX(0) scale(1); opacity: 0.9; }
+      100% { transform: translateY(-110vh) translateX(var(--drift, 20px)) scale(0.3); opacity: 0; }
+    }
+
+    .brand-wrap {
+      opacity: 0; transform: translateY(-24px);
+      animation: introDrop 0.8s cubic-bezier(.2,.9,.25,1.1) forwards;
+      animation-delay: 0.15s;
+    }
+
+    @keyframes introDrop {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .brand-title {
+      font-family: 'Arial Black', 'Segoe UI', sans-serif;
+      font-size: 36px; text-transform: uppercase; letter-spacing: 4px;
+      background: linear-gradient(180deg, #fff2c6 0%, #ff9900 55%, #ff3300 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 18px rgba(255,90,0,0.55));
+      animation: pulseGlow 2s infinite alternate;
+    }
+
+    .brand-subtitle {
+      font-size: 13px; color: #00e5ff; letter-spacing: 3px; margin: 8px 0 26px;
+      text-shadow: 0 0 10px rgba(0,229,255,0.6);
+      position: relative; display: inline-block;
+    }
+
+    .card {
+      background: rgba(15, 13, 12, 0.88); padding: 22px 24px; border-radius: 14px;
+      border: 1px solid rgba(255,140,0,0.35);
+      box-shadow: 0 0 40px rgba(255, 69, 0, 0.18), inset 0 0 30px rgba(255,140,0,0.04);
+      max-width: 420px; width: 88%;
+      opacity: 0; transform: translateY(30px) scale(0.96);
+      animation: cardRise 0.7s cubic-bezier(.2,.9,.25,1.1) forwards;
+      animation-delay: 0.45s;
+      backdrop-filter: blur(6px);
+    }
+    @keyframes cardRise { to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    .card-heading { font-size: 13px; letter-spacing: 2px; color: #ffb347; margin-bottom: 12px; font-weight: bold; }
+
+    input, button {
+      padding: 13px; margin: 6px 0; font-size: 15px; border-radius: 8px; border: none;
+      width: 100%; font-family: inherit;
+    }
+    input {
+      background: #0e0c0b; border: 1px solid #3a2a1c; color: #fff; text-align: center;
+      letter-spacing: 1px; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input:focus { outline: none; border-color: #ff8c00; box-shadow: 0 0 12px rgba(255,140,0,0.4); }
+
+    button {
+      background: linear-gradient(45deg, #ff4500, #ff8c00); color: #16110c;
+      font-weight: bold; cursor: pointer; text-transform: uppercase;
+      letter-spacing: 1px; transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+      box-shadow: 0 4px 14px rgba(255,90,0,0.35);
+    }
+    button:hover { transform: translateY(-2px) scale(1.015); filter: brightness(1.15); }
+    button:active { transform: translateY(0) scale(0.97); filter: brightness(0.95); }
+    button.btn-cyan {
+      background: linear-gradient(45deg, #00b8d4, #00e5ff); color: #052733;
+      box-shadow: 0 4px 14px rgba(0,200,255,0.3);
+    }
+    .hidden { display: none !important; }
+
+    .status-text { font-size: 12px; color: #00ff88; letter-spacing: 0.5px; margin: 10px 0; min-height: 14px; }
+
+    /* Match Game Over Screen */
+    #game-over-modal h1 { font-size: 38px; margin-bottom: 8px; letter-spacing: 2px; }
+    #game-over-modal p { font-family: inherit; margin-bottom: 20px; color: #ccc; font-size: 13px; letter-spacing: 1px; }
+
+    /* ===================== IN-GAME HUD ===================== */
+    #hud {
+      position: absolute; top: 14px; width: 100%; display: flex;
+      justify-content: space-between; padding: 0 16px; pointer-events: none;
+      z-index: 10; font-weight: bold; font-size: 13px;
+    }
+    .hud-box {
+      background: rgba(0, 0, 0, 0.55); padding: 8px 14px; border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(3px);
+      letter-spacing: 0.5px;
+    }
+
+    #hp-bar-wrap { width: 140px; }
+    #hp-bar-outer { width: 100%; height: 8px; background: rgba(255,255,255,0.15); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+    #hp-bar-inner { width: 100%; height: 100%; background: linear-gradient(90deg,#ff4500,#ffcc00); transition: width 0.2s ease; }
+
+    /* Reticle */
+    #crosshair {
+      position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+      transform: translate(-50%, -50%); pointer-events: none; z-index: 6;
+    }
+    #crosshair .dot {
+      position: absolute; top: 50%; left: 50%; width: 4px; height: 4px;
+      background: #00ff88; border-radius: 50%; transform: translate(-50%, -50%);
+      box-shadow: 0 0 4px #00ff88;
+    }
+    #crosshair .tick {
+      position: absolute; background: #00ff88; box-shadow: 0 0 4px rgba(0,255,136,0.8);
+      transition: transform 0.09s ease-out, opacity 0.15s ease;
+    }
+    #crosshair .tick.top    { top: -18px; left: -1px; width: 2px; height: 8px; }
+    #crosshair .tick.bottom { top: 10px;  left: -1px; width: 2px; height: 8px; }
+    #crosshair .tick.left   { top: -1px; left: -18px; width: 8px; height: 2px; }
+    #crosshair .tick.right  { top: -1px; left: 10px;  width: 8px; height: 2px; }
+
+    /* Overlay UI */
+    #heal-bar-container, #reload-bar-container {
+      position: absolute; bottom: 26%; left: 50%; transform: translateX(-50%);
+      width: 230px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px;
+      border: 1px solid #00ff66; text-align: center; z-index: 10;
+    }
+    #reload-bar-container { border-color: #ffcc00; bottom: 34%; }
+    #heal-bar-container p, #reload-bar-container p { font-size: 12px; margin-bottom: 6px; letter-spacing: 1px; color: #00ff88; }
+    #reload-bar-container p { color: #ffcc00; }
+
+    #damage-flash {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 8; background: radial-gradient(circle, transparent 55%, rgba(255,0,0,0.45) 100%);
+      opacity: 0; transition: opacity 0.35s ease;
+    }
+
+    #status-banner {
+      position: absolute; top: 18%; left: 50%; transform: translate(-50%, -10px);
+      z-index: 10; font-size: 22px; font-weight: bold; letter-spacing: 3px;
+      opacity: 0; text-shadow: 0 0 12px rgba(0,0,0,0.8);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    /* ===================== TOUCH CONTROLS ===================== */
+    #touch-controls {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 20;
+    }
+    #joystick-container {
+      position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px;
+      background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%; pointer-events: auto; touch-action: none;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+    }
+    #joystick-knob {
+      position: absolute; top: 50%; left: 50%; width: 52px; height: 52px;
+      background: radial-gradient(circle at 35% 30%, #ff9d4d, #ff4500 70%);
+      border: 2px solid #fff; border-radius: 50%;
+      transform: translate(-50%, -50%); pointer-events: none;
+      box-shadow: 0 0 14px rgba(255,90,0,0.6);
+    }
+    #touch-look-area {
+      position: absolute; top: 0; right: 0; width: 55%; height: 100%;
+      pointer-events: auto; touch-action: none;
+    }
+    .touch-btn {
+      position: absolute; width: 60px; height: 60px; border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55); border: 2px solid rgba(255,255,255,0.5); color: white;
+      font-weight: bold; font-size: 11px; display: flex; align-items: center;
+      justify-content: center; pointer-events: auto; user-select: none;
+      touch-action: none; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    #btn-fire    { bottom: 65px; right: 135px; width: 78px; height: 78px; background: rgba(255, 30, 0, 0.55); border-color: #ff4500; font-size: 17px; }
+    #btn-jump    { bottom: 165px; right: 55px; }
+    #btn-crouch  { bottom: 90px; right: 55px; background: rgba(150,150,150,0.4); border-color: #ccc; }
+    #btn-gloo    { bottom: 165px; right: 145px; background: rgba(0, 229, 255, 0.35); border-color: #00e5ff; }
+    #btn-medkit  { bottom: 245px; right: 100px; background: rgba(0, 255, 102, 0.35); border-color: #00ff66; }
+    #btn-reload  { bottom: 245px; right: 180px; background: rgba(255, 204, 0, 0.35); border-color: #ffcc00; font-size: 10px; }
+
+    /* ===================== WEAPON SHOP ===================== */
+    #shop-overlay {
+      position: absolute; bottom: 0; left: 0; width: 100%;
+      z-index: 30; padding: 14px; pointer-events: none;
+      display: flex; justify-content: center;
+    }
+    #shop-panel {
+      background: rgba(12, 11, 10, 0.92); border: 1px solid rgba(255,140,0,0.4);
+      border-radius: 14px; padding: 14px 18px; max-width: 820px; width: 100%;
+      pointer-events: auto; backdrop-filter: blur(6px);
+      box-shadow: 0 0 40px rgba(255,69,0,0.2);
+    }
+    #shop-panel h3 { font-size: 14px; letter-spacing: 2px; color: #ffb347; margin-bottom: 4px; text-align: center; }
+    #shop-hint { font-size: 11px; color: #999; text-align: center; margin-bottom: 10px; }
+    .weapon-cat { font-size: 10px; color: #777; letter-spacing: 2px; margin: 8px 0 5px; }
+    .weapon-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .weapon-btn {
+      flex: 1 1 110px; min-width: 100px; padding: 9px 10px; margin: 0;
+      background: rgba(255,255,255,0.06); border: 1px solid #3a3a3a; color: #eee;
+      border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; text-align: left;
+    }
+    .weapon-btn span { display: block; font-size: 10px; color: #999; font-weight: normal; margin-top: 2px; }
+    .weapon-btn.selected { background: linear-gradient(45deg, rgba(255,69,0,0.35), rgba(255,140,0,0.25)); border-color: #ff8c00; color: #fff; }
+    #shop-status { font-size: 12px; color: #00e5ff; text-align: center; margin-top: 10px; min-height: 15px; }
+  </style>
+
+  <!-- Browser Polyfills & Standalone Colyseus Bundle -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/buffer/6.0.3/buffer.min.js"></script>
+  <script>
+    window.Buffer = window.Buffer || window.buffer.Buffer;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/colyseus.js@0.15.18/dist/colyseus.js"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Menu & Intro Overlay -->
+  <div id="intro-screen">
+    <div class="brand-wrap">
+      <h1 class="brand-title">DEEPAN GAMING INDUSTRY</h1>
+      <p class="brand-subtitle">MULTIPLAYER ARENA &middot; LOBBY SERVER ACTIVE</p>
+    </div>
+
+    <div id="lobby-card" class="card">
+      <div id="mode-select">
+        <div class="card-heading">SELECT GAME MODE</div>
+        <input type="text" id="player-name-input" placeholder="Enter Your Name" maxlength="12" />
+        <button id="cs-lonewolf-btn">CS Lone Wolf (1v1)</button>
+        <button id="br-mode-btn" class="btn-cyan">Battle Royale (20 Players / Bots)</button>
+        <p id="lobby-status" class="status-text">&nbsp;</p>
+      </div>
+    </div>
+
+    <!-- Match Game Over Screen -->
+    <div id="game-over-modal" class="card hidden">
+      <h1 id="match-result-title">VICTORY!</h1>
+      <p id="match-result-sub">Match Completed</p>
+      <button onclick="location.reload()">Back to Lobby</button>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-box" style="color:#ff9900;">
+      HP: <span id="hp">200</span>
+      <div id="hp-bar-wrap"><div id="hp-bar-outer"><div id="hp-bar-inner"></div></div></div>
+    </div>
+    <div class="hud-box" style="color: #00e5ff;">SCORE&nbsp; <span id="local-score" style="color: #00ff00;">0</span> - <span id="remote-score" style="color: #ff0055;">0</span></div>
+    <div class="hud-box" style="color: #ffcc00;">GLOO: <span id="gloo-count">3</span></div>
+    <div class="hud-box" style="color: #00ff66;">MEDKIT: <span id="medkit-count">2</span></div>
+    <div class="hud-box" style="color: #ffffff;">AMMO: <span id="ammo-count">20</span> / <span id="ammo-max">20</span></div>
+  </div>
+
+  <div id="status-banner"></div>
+  <div id="damage-flash"></div>
+
+  <!-- Touch Controls -->
+  <div id="touch-controls">
+    <div id="joystick-container"><div id="joystick-knob"></div></div>
+    <div id="touch-look-area"></div>
+    <div id="btn-fire" class="touch-btn">FIRE</div>
+    <div id="btn-jump" class="touch-btn">JUMP</div>
+    <div id="btn-crouch" class="touch-btn">CROUCH</div>
+    <div id="btn-gloo" class="touch-btn">GLOO</div>
+    <div id="btn-medkit" class="touch-btn">MED</div>
+    <div id="btn-reload" class="touch-btn">RELOAD</div>
+  </div>
+
+  <!-- Healing UI -->
+  <div id="heal-bar-container" class="hidden">
+    <p>HEALING&hellip; DON'T MOVE</p>
+    <div style="width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden;">
+      <div id="heal-progress" style="width: 0%; height: 100%; background: #00ff66; transition: width 0.05s linear;"></div>
+    </div>
+  </div>
+
+  <!-- Reload UI -->
+  <div id="reload-bar-container" class="hidden">
+    <p>RELOADING&hellip;</p>
+    <div style="width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden;">
+      <div id="reload-progress" style="width: 0%; height: 100%; background: #ffcc00; transition: width 0.05s linear;"></div>
+    </div>
+  </div>
+
+  <!-- Pre-match Weapon Shop -->
+  <div id="shop-overlay" class="hidden">
+    <div id="shop-panel">
+      <h3>WEAPON SHOP</h3>
+      <p id="shop-hint">Walk around while you choose &middot; Lock in before timer expires</p>
+
+      <div class="weapon-cat">SUBMACHINE GUNS</div>
+      <div class="weapon-row">
+        <button class="weapon-btn selected" data-weapon="mp40">MP40<span>16 dmg &middot; fast auto</span></button>
+        <button class="weapon-btn" data-weapon="ump">UMP<span>18 dmg &middot; steady auto</span></button>
+      </div>
+
+      <div class="weapon-cat">PISTOLS</div>
+      <div class="weapon-row">
+        <button class="weapon-btn" data-weapon="m1911">M1911<span>26 dmg &middot; semi-auto</span></button>
+        <button class="weapon-btn" data-weapon="deagle">Desert Eagle<span>38 dmg &middot; heavy hitter</span></button>
+        <button class="weapon-btn" data-weapon="g18">G18<span>20 dmg &middot; full auto</span></button>
+      </div>
+
+      <div class="weapon-cat">SNIPERS</div>
+      <div class="weapon-row">
+        <button class="weapon-btn" data-weapon="awm">AWM<span>95 dmg &middot; bolt action</span></button>
+        <button class="weapon-btn" data-weapon="kar98k">Kar98k<span>85 dmg &middot; bolt action</span></button>
+        <button class="weapon-btn" data-weapon="m24">M24<span>80 dmg &middot; bolt action</span></button>
+      </div>
+
+      <button id="shop-confirm-btn" style="margin-top:10px;">Lock In Loadout</button>
+      <p id="shop-status">Pick your weapon, then lock in.</p>
+    </div>
+  </div>
+
+  <div id="crosshair">
+    <div class="dot"></div>
+    <div class="tick top"></div>
+    <div class="tick bottom"></div>
+    <div class="tick left"></div>
+    <div class="tick right"></div>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <script>
+    (function spawnEmbers() {
+      const host = document.getElementById('intro-screen');
+      for (let i = 0; i < 22; i++) {
+        const e = document.createElement('div');
+        e.className = 'ember';
+        const size = 2 + Math.random() * 4;
+        e.style.width = size + 'px';
+        e.style.height = size + 'px';
+        e.style.left = Math.random() * 100 + '%';
+        e.style.setProperty('--drift', (Math.random() * 60 - 30) + 'px');
+        e.style.animationDuration = (5 + Math.random() * 6) + 's';
+        e.style.animationDelay = (Math.random() * 8) + 's';
+        host.appendChild(e);
+      }
+    })();
+  </script>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
